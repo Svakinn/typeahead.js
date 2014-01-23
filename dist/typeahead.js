@@ -43,6 +43,9 @@
         isUndefined: function (obj) {
             return typeof obj === "undefined";
         },
+        isEmpty: function (str) {
+            if (typeof str === "undefined" || str === null || str === '');
+        },
         bind: $.proxy,
         bindAll: function (obj) {
             var val;
@@ -571,48 +574,13 @@
                     that.nameAdjacencyList[character] = masterNameAdjacency ? masterNameAdjacency.concat(nameAdjacency) : nameAdjacency;
                 });
             },
-            /*
-            Replace this one with one that actually works for data uincluding spaces
-            _getLocalSuggestions: function (terms) {
-                var that = this, firstChars = [], lists = [], shortestList, suggestions = [];
-                utils.each(terms, function (i, term) {
-                    var firstChar = term.charAt(0);
-                    !~utils.indexOf(firstChars, firstChar) && firstChars.push(firstChar);
-                });
-                utils.each(firstChars, function (i, firstChar) {
-                    var list = that.adjacencyList[firstChar];
-                    if (!list) {
-                        return false;
-                    }
-                    lists.push(list);
-                    if (!shortestList || list.length < shortestList.length) {
-                        shortestList = list;
-                    }
-                });
-                if (lists.length < firstChars.length) {
-                    return [];
-                }
-                utils.each(shortestList, function (i, id) {
-                    var item = that.itemHash[id], isCandidate, isMatch;
-                    isCandidate = utils.every(lists, function (list) {
-                        return ~utils.indexOf(list, id);
-                    });
-                    isMatch = isCandidate && utils.every(terms, function (term) {
-                        return utils.some(item.tokens, function (token) {
-                            return token.indexOf(term) === 0;
-                        });
-                    });
-                    isMatch && suggestions.push(item);
-                });
-                return suggestions;
-            },
-            */
+            //_getLocalSuggestion rewritten since the old version was not ideal
             //Here there is only one search term: the query entered
             //This search prefers names first and then tokens. This is helpful since we are using hint system and want the hint to match the name
-            //This will also handle empty query as to return all options (up to the limit of cours)
+            //This will also handle empty query as to return all options (up to the limit of course)
             _getLocalSuggestions: function (query) {
-                var suggestions = [], src = query.toLowerCase(), itLen, noFound = 0, regSrc = new RegExp('^' + src, 'i');
-                if (query === null || query === '') {
+                var suggestions = [], src = utils.escapeRegExChars(query.toLowerCase()), itLen, noFound = 0, regSrc = new RegExp('^' + src, 'i');
+                if (utils.isEmpty(query)) {
                     //User asks for all suggestions if no query
                     var lim = this.limit;
                     utils.each(this.itemHash, function (i, item) {
@@ -1021,10 +989,10 @@
                 var $suggestion = this._getSuggestions().filter(".tt-is-under-cursor").first();
                 return $suggestion.length > 0 ? extractSuggestion($suggestion) : null;
             },
-            getFirstSuggestion: function () {
-                var $suggestion = this._getSuggestions().first();
-                return $suggestion.length > 0 ? extractSuggestion($suggestion) : null;
-            },
+            //getFirstSuggestion: function () {  //Replaced by _findFirstSuggestion that finds first matching (remote data can include suggestion where the first one does not neccecerily match the query)
+            //    var $suggestion = this._getSuggestions().first();
+            //    return $suggestion.length > 0 ? extractSuggestion($suggestion) : null;
+            //},
             renderSuggestions: function (dataset, suggestions) {
                 var datasetClassName = "tt-dataset-" + dataset.name, wrapper = '<div class="tt-suggestion">%body</div>', compiledHtml, $suggestionsList, $dataset = this.$menu.find("." + datasetClassName), elBuilder, fragment, $el;
                 if ($dataset.length === 0) {
@@ -1037,7 +1005,7 @@
                     elBuilder = document.createElement("div");
                     fragment = document.createDocumentFragment();
                     utils.each(suggestions, function (i, suggestion) {
-                        suggestion.dataset = dataset.name;
+                        //suggestion.dataset = dataset.name; (dsname takes care of this at suggestion creation)
                         compiledHtml = dataset.template(suggestion.datum);
                         elBuilder.innerHTML = wrapper.replace("%body", compiledHtml);
                         $el = $(elBuilder.firstChild).css(css.suggestion).data("suggestion", suggestion);
@@ -1061,7 +1029,38 @@
                     this.isEmpty = true;
                     this._hide();
                 }
+            },
+            _findSuggestion: function (keyValue) { //Returns suggestion JQuery element
+                var suggestions = this._getSuggestions();
+                var $foundSuggestion = null;
+                utils.each(suggestions, function (i, suggestion) {
+                    var data = extractSuggestion($(suggestion));
+                    if (data && data.value === keyValue) {
+                        $foundSuggestion = $(suggestion);
+                        return false;
+                    }
+                });
+                return $foundSuggestion;
+            },
+            _findFirstSuggestion: function (query) { //Find first suggestion that matches query by name - return the data
+                var suggestions = this._getSuggestions();
+                var foundSuggestion = null;
+                utils.each(suggestions, function (i, suggestion) {
+                    var data = extractSuggestion($(suggestion));
+                    if (data && query.toLowerCase() === data.name.substring(0,query.length).toLowerCase()) {
+                        foundSuggestion = data;
+                        return false;
+                    }
+                });
+                return foundSuggestion;
+            },
+            highlightSuggestion: function ($suggestion) {
+                if ($suggestion) {
+                    this._getSuggestions().removeClass("tt-is-under-cursor");
+                    $suggestion.addClass("tt-is-under-cursor");
+                }
             }
+            
         });
         return DropdownView;
         function extractSuggestion($el) {
@@ -1197,7 +1196,7 @@
                 var inputValue = this.inputView.getInputValue();
                 var restrict = (typeof this.restrictInputToDatum == 'function' ? this.restrictInputToDatum() : this.restrictInputToDatum);
                 //To allow user to select nothing we nullify the datum if the input string is empty and the datum name is not empty
-                if (inputValue === null || inputValue.length == 0) {
+                if (utils.isEmpty(inputValue)) {
                     if (!this.selectedDatum || this.selectedDatum[this.dsIdx[this.selectedDatumDsName].nameKey]) {
                         this.selectedDatum = null; //Clear the selected datum and notify
                         this.eventBus.trigger("noSelect", ''); //TTrigger event for databinding since user is deliberatly selecting empty value
@@ -1212,7 +1211,7 @@
                         this.eventBus.trigger("noSelect", inputValue); //TTrigger event for databinding of selected datum
                     }
                 }
-                else if (!this.selectedDatum && inputValue !== null && inputValue.length > 0) {
+                else if (!this.selectedDatum && !utils.isEmpty(inputValue)) {
                     if (restrict)
                         this.inputView.setInputValue('', true); //Reset input value to empty value if restriction
                     this.eventBus.trigger("noSelect", inputValue); //TTrigger event for databinding of selected datum
@@ -1228,7 +1227,18 @@
                 }
             },
             _updateHint: function () {
-                var suggestion = this.dropdownView.getFirstSuggestion(), hint = suggestion ? suggestion.name : null, dropdownIsVisible = this.dropdownView.isVisible(), inputHasOverflow = this.inputView.isOverflow(), inputValue, query, escapedQuery, beginsWithQuery, match;
+                var suggestion = null;
+                if (this.selectedDatum) { //Find by key and highlight
+                    var key = this.dsIdx[this.selectedDatumDsName].valueKey;
+                    var $suggestion = this.dropdownView._findSuggestion(this.selectedDatum[key]);
+                    this.dropdownView.highlightSuggestion($suggestion);
+                    suggestion = $suggestion ? $suggestion.data("suggestion") : null;
+                }
+                else {
+                    //suggestion = this.dropdownView.getFirstSuggestion();
+                    suggestion = this.dropdownView._findFirstSuggestion(this.inputView.getInputValue());
+                }
+                var hint = suggestion ? suggestion.name : null, dropdownIsVisible = this.dropdownView.isVisible(), inputHasOverflow = this.inputView.isOverflow(), inputValue, query, escapedQuery, beginsWithQuery, match;
                 if (hint && dropdownIsVisible && !inputHasOverflow) {
                     inputValue = this.inputView.getInputValue();
                     query = inputValue.replace(/\s{2,}/g, " ").replace(/^\s+/g, "");
@@ -1293,7 +1303,7 @@
                     //Another thing we want to do here is to clear 
                     this._handleBusy(false, null);
                     this.dropdownView.close();
-                    this.eventBus.trigger("selected", suggestion.datum, suggestion.dataset);
+                    this.eventBus.trigger("selected", suggestion.datum, suggestion.dsname);
                 };
                 //else
                 //    this.tracer.push('Typeaheadview handleselection found no suggestion');
@@ -1319,7 +1329,7 @@
                     this.isLoading = isLoading;
             },
             _handleFocused: function () {
-                this.inputView.isFocused = true; //Debug
+                this.inputView.isFocused = true; 
                 this._queryForSuggestions();
             },
             _handleBlured: function (e) {
@@ -1367,12 +1377,13 @@
                 query = this.inputView.getQuery();
                 hint = this.inputView.getHintValue();
                 if (hint !== "" && query !== hint) {
-                    suggestion = this.dropdownView.getFirstSuggestion();
+                    //suggestion = this.dropdownView.getFirstSuggestion();
+                    suggestion = this.dropdownView._findFirstSuggestion(query);
                     //this.tracer.push('autocomplete: ' + suggestion.name);
                     this.selectedDatum = suggestion.datum;
                     this.selectedDatumDsName = suggestion.dsname;
                     this.inputView.setInputValue(suggestion.name);
-                    this.eventBus.trigger("autocompleted", suggestion.datum, suggestion.dataset);
+                    this.eventBus.trigger("autocompleted", suggestion.datum, suggestion.dsname);
                 }
                 //this.tracer.push('Typeaheadview autocomplete: ' + query);
             },
@@ -1391,7 +1402,8 @@
                 this._clearHint();
                 this._clearSuggestions();
                 //this._getSuggestions();  
-                //this._queryForSuggestions();  //ToDO: this is questionable, should only do this if control is focused (now only needed if prefetch is in progress)
+                if (this.inputView.hasFocus())
+                   this._queryForSuggestions();  //only do this if control is already focused
             },
             setDatum: function (datum, dsname) {
                 //Since we are using namekeys and valuekeys we can not assume how to pickup datum values unless we have the name and value keys
@@ -1407,7 +1419,8 @@
                     this._clearHint();
                     this._clearSuggestions();
                     //this._getSuggestions();
-                    //this._queryForSuggestions(); //ToDO: this is questionable, should only do this if control is focused (now only needed if prefetch is in progress)
+                    if (this.inputView.hasFocus())
+                        this._queryForSuggestions(); //oly do this if control is allready focused
                 };
             }
         });

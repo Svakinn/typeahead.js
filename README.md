@@ -25,8 +25,10 @@ Se [this doc](New.md) for the new features in the latest update of this fork.
 
 Examples
 --------
-
-For some working examples of typeahead.js, visit the [typeahead examples page][examples].  I am still working on examples for this fork but the [Knockout examples](Knockout.md) are ready.
+For some working examples of typeahead.js, visit the [typeahead examples page][examples].  
+For JQuery based examples of new features of this fork visit the [JQuery examples](Examples.md) page.  
+The equivalent [Knockout examples are here](Knockout.md).  
+Both pages also point to live Plunker examples.
 
 Features
 --------

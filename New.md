@@ -1,6 +1,6 @@
 About this fork
 ====
-This fork is intended to solve critical bugs and supply basic functionality sorely missing in current version of typeahead.js.  
+The fork is intended to solve critical bugs and supply basic functionality sorely missing in current version of typeahead.js.  
 Main reason of course being able to use this control in my application.  
 As the list of necessary changes grew larger the need for documentation and sharing with the community grew larger. I have a sneaky suspicion that there are many others in similar problems with this control as I am and many of the features and bugs have been solved or semi-solved many times over by individuals like myself.  
 Hopefully the maintainers of the typeahead control will take some if not all of the features into this or next version of the control.
@@ -16,26 +16,28 @@ Hopefully the maintainers of the typeahead control will take some if not all of 
 **8)** **Requested basic feature** Get suggestions before typing starts.  
 **9)** **New feature** Simplified initialization - suggestion search triggering (on demand)   
 **10)** **New feature** Busy indication    
-**11)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
+**11)** **New feature** Selected datum is highlighted in the suggestion list.  
+**12)** **New feature** Hint is found even if the first suggestion does not start with same characters as the input box.  
+**13)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
 
 The changes in more detail
 ====
 #1) Bugfix: IE11 problems
 This bug was identified and reported by @nathankoop (#557).  Modification of the isMsie function resolves the issue.
 #2) Bugfix: Blur/Focus flickering
-When user uses mouse click to select suggestion in the dropdown list, the dropdown list receives the focus and thus blurs the input box.  In the current hack to try to minimize the effect of this but still this causes blur/focus flickering on the input box.  The solution was simply to stop the `mouseDown` event on the dropdown to bubble and then remove the 'hack' in the `_handleSelection` handler.
+When user uses mouse click to select suggestion in the dropdown list, the dropdown list receives the focus and thus blurs the input box.  In the current version (0.9.3), a hack was made to try to minimize the effect of this, but still this causes blur/focus flickering on the input box.  The solution was simply to stop the `mouseDown` event on the dropdown to bubble and then remove the 'hack' in the `_handleSelection` handler.
 #3) Bugfix: Local data search
 The local data suggestion search does not handle suggestions that include space.  Also it has been criticized for being resource expensive and over complicated.  
 I rewrote the search to behave on spaced suggestions.  It now takes the original query unchanged for the search.  It priorities the search on the suggestion display value first, before looking at other tokens.  The implementation should also be a bit faster in most situations.  Of course this search could be made even faster by some optimization and search mechanics like bubble sort.  However there is always the tradeoff between spending CPU on preparing the data for search and the actual search itself.   I also included an option (`matcher` ) for users to do their own implementation of local search.
 You could also argue that instead of using large amount of data locally would better be resolved by using the remote option.
-#4) Custom data retreival
+#4) Custom data retrieval
 The ability to control the data-retrieval better than just controlling Ajax lookup is vital for many applications (like my own).  For example users using view models and own implementations of data-lookups require this sourly.  This regards both the issue of reusing internal functions and controlling the display while the data retrieval takes place, i.e. managing progress indicators and other custom stuff. 
-I have seen at least two pull requests that address this issue but they both lack the ability to use the caching and throttling options the remote url offers.  Also proper asynchronous support was missing: handling of promises.
+I have seen at least two pull requests that address this issue but they both lack the ability to use the caching and throttling options the remote URL offers.  Also proper asynchronous support was missing: handling of promises.
 My implementation addresses this.  It supports but does not require handling of JQuery and Q promises.   
 The new **handler** option is used for this for remote datasets (name suggested by @cusspvz).   
-For prefetch datasets the **prefetchHandler** option is used.
+For prefetched datasets the **prefetchHandler** option is used.
 #5) Keys & display names
-I would think that at least quarter of use cases for auto completion involves data with unique keys -> where display names may not be unique.  So it is a basic requirement for this control.  Ryan Pitts recently issued an excellent pull request (546) to address this and i have included it in this fork.  I have also introduced the implementation of selected datum that is updated on selection or auto completion.  New interface methods: `getDatum` and `setDatum` allow for JQuery interface to this value.  This is also related to the selection validation issue below.
+I would think that at least quarter of use cases for auto completion involves data with unique keys -> where display names may not be unique.  So it is a basic requirement for this control.  Ryan Pitts recently issued an excellent pull request (546) to address this and I have included it in this fork.  I have also introduced the implementation of selected datum that is updated on selection or auto completion.  New interface methods: `getDatum` and `setDatum` allow for JQuery interface to this value.  This is also related to the selection validation issue below.
 #6) Caching control
 Many users are apparently having issues with the caching mechanism for the control, mainly lacking methods of clearing it.  Cache is also an issue in single page applications that may re-use html sections but with different context.
 I have implemented 4 new ways of interfering with the cache.    
@@ -57,15 +59,19 @@ Let’s say you have 10 typeahead controls hooked up with remote data on your pa
 #10) Busy indication
 New event `busyUpdate` has been implemented.  It will fire of when the busy state of the control is changed.  This includes both initialization of local/prefetched data and when suggestion search is running.  This enables programmers to easily hook up loaders or busy-indicators to the control.  The knockout binding handler (see below) also supports this by allowing data binding to the `isBusy` option.  
 Plunker demo of this option is available [here](http://plnkr.co/edit/56nDoL?p=preview).
-#11) Knockout Binding Handler
+#11) Identify the selected datum
+The selected datum is now highlicted in the suggestion list.  This is the behavior user would expect, i.e. in standard dropdownbox.
+#12) Suggestion hint change
+The current functionality of typeahead is to calculate hint if the first suggestion in suggestion list starts with same characters as the typed query in the input box.  This means that input hint is not given if the first suggestion does not match.  This is not uncommon scenario, especially where tokens are used for search or remote option is used.  I changed this behavior to look for hint in all the suggestions, not just the first.
+#13) Knockout Binding Handler
 Knockout is very powerful tool for data-binding view models to html pages.  Me myself and many others use it in their SPA applications.  For SPA programmers it is a basic requirement for custom tools to have ready to use Knockout Binding Handler.  
 This one also has application beyond just options initialization and two-way data binding. It also handles the task of abstracting the datum object from the viewmodel.  For example the user can data bind the local option to any data that is a list of rows, `knockoutObservable` and `knockoutObservableArray`  included.  The only thing the user has to supply is a mapping info to the dataset columns using the `nameKey`, `valueKey`, `tokenFields` and `valueFields` options.  I think this mapping may be something that could even be implemented within the typeahead control (some day maybe).  
 
 #Examples
 There are both example pages for **Knockout** and **JQuery**.  
-The examples are equivalent exept one shows the solution by Knockout but the other by JQuery.  
+The examples are equivalent except one shows the solution by Knockout but the other by JQuery.  
 Furthermore those pages point to live [Plunker](http://plnkr.co/edit/QaRp2m?p=preview) examples.   
-**[This is link to the Knokout example page](Knockout.md).**  
+**[This is link to the Knockout example page](Knockout.md).**  
 **[This is the link to the JQuery example page](Examples.md)**  
 
 #Related open issues
@@ -93,4 +99,4 @@ I took a quick look at open issues for the last 5 months and it seems that the c
 
 #Platform Testing
 At this moment I have successfully tested this version on IE11, Chrome and Firefox on Windows 8.1, IE on Windows phone and Safari and Chrome on IPhone.  
-If you try out this fork and find any issues please let me know on the [Isues list](https://github.com/Svakinn/typeahead.js/issues) of the fork.  I promise to respond promptly :-)
+If you try out this fork and find any issues please let me know on the [Issues list](https://github.com/Svakinn/typeahead.js/issues) of the fork.  I promise to respond promptly :-)
