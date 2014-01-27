@@ -17,8 +17,9 @@ Hopefully the maintainers of the typeahead control will take some if not all of 
 **9)** **New feature** Simplified initialization - suggestion search triggering (on demand)   
 **10)** **New feature** Busy indication    
 **11)** **New feature** Selected datum is highlighted in the suggestion list.  
-**12)** **New feature** Hint is found even if the first suggestion does not start with same characters as the input box.  
-**13)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
+**12)** **New feature** Hint is found even if the first suggestion does not start with same characters as the input box.
+**13)** **New feature** Hinted value is highligted in the suggestion list. 
+**14)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
 
 The changes in more detail
 ====
@@ -60,10 +61,12 @@ Let’s say you have 10 typeahead controls hooked up with remote data on your pa
 New event `busyUpdate` has been implemented.  It will fire of when the busy state of the control is changed.  This includes both initialization of local/prefetched data and when suggestion search is running.  This enables programmers to easily hook up loaders or busy-indicators to the control.  The knockout binding handler (see below) also supports this by allowing data binding to the `isBusy` option.  
 Plunker demo of this option is available [here](http://plnkr.co/edit/56nDoL?p=preview).
 #11) Identify the selected datum
-The selected datum is now highlicted in the suggestion list.  This is the behavior user would expect, i.e. in standard dropdownbox.
+The selected datum is now highlighted in the suggestion list.  This is the behavior user would expect, i.e. in standard dropdownbox.  New class is allocated for the selected element: **tt-is-current**
 #12) Suggestion hint change
 The current functionality of typeahead is to calculate hint if the first suggestion in suggestion list starts with same characters as the typed query in the input box.  This means that input hint is not given if the first suggestion does not match.  This is not uncommon scenario, especially where tokens are used for search or remote option is used.  I changed this behavior to look for hint in all the suggestions, not just the first.
-#13) Knockout Binding Handler
+#13) Hinted suggestion highlighted
+The hint now highlights the relevant line in the suggestion list.
+#14) Knockout Binding Handler
 Knockout is very powerful tool for data-binding view models to html pages.  Me myself and many others use it in their SPA applications.  For SPA programmers it is a basic requirement for custom tools to have ready to use Knockout Binding Handler.  
 This one also has application beyond just options initialization and two-way data binding. It also handles the task of abstracting the datum object from the viewmodel.  For example the user can data bind the local option to any data that is a list of rows, `knockoutObservable` and `knockoutObservableArray`  included.  The only thing the user has to supply is a mapping info to the dataset columns using the `nameKey`, `valueKey`, `tokenFields` and `valueFields` options.  I think this mapping may be something that could even be implemented within the typeahead control (some day maybe).  
 

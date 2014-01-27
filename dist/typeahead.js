@@ -21,29 +21,29 @@
 (function ($) {
     var VERSION = "0.9.4";
     var utils = {
-        isMsie: function () {
+        isMsie: function() {
             //Improved IE11 detection (borrowed from the bowser Github project: https://github.com/ded/bowser)
             return /(msie|trident)/i.test(navigator.userAgent) ? navigator.userAgent.match(/(msie |rv:)(\d+(.\d+)?)/i)[2] : false;
         },
-        isBlankString: function (str) {
+        isBlankString: function(str) {
             return !str || /^\s*$/.test(str);
         },
-        escapeRegExChars: function (str) {
+        escapeRegExChars: function(str) {
             return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
         },
-        isString: function (obj) {
+        isString: function(obj) {
             return typeof obj === "string";
         },
-        isNumber: function (obj) {
+        isNumber: function(obj) {
             return typeof obj === "number";
         },
         isArray: $.isArray,
         isFunction: $.isFunction,
         isObject: $.isPlainObject,
-        isUndefined: function (obj) {
+        isUndefined: function(obj) {
             return typeof obj === "undefined";
         },
-        isEmpty: function (str) {
+        isEmpty: function(str) {
             if (typeof str === "undefined" || str === null || str === '');
         },
         bind: $.proxy,
@@ -577,7 +577,7 @@
             //_getLocalSuggestion rewritten since the old version was not ideal
             //Here there is only one search term: the query entered
             //This search prefers names first and then tokens. This is helpful since we are using hint system and want the hint to match the name
-            //This will also handle empty query as to return all options (up to the limit of course)
+            //This will also handle empty query as to return all options (up to the limit of cours)
             _getLocalSuggestions: function (query) {
                 var suggestions = [], src = utils.escapeRegExChars(query.toLowerCase()), itLen, noFound = 0, regSrc = new RegExp('^' + src, 'i');
                 if (utils.isEmpty(query)) {
@@ -734,7 +734,7 @@
                 40: "down"
             };
             this.tracer = o.tracer;
-            this.isFocused = false;  
+            this.isFocused = false;
             this.$hint = $(o.hint);
             this.$input = $(o.input).on("blur.tt", this._handleBlur).on("focus.tt", this._handleFocus).on("keydown.tt", this._handleSpecialKeyEvent);
             if (!utils.isMsie()) {
@@ -1042,25 +1042,30 @@
                 });
                 return $foundSuggestion;
             },
-            _findFirstSuggestion: function (query) { //Find first suggestion that matches query by name - return the data
-                var suggestions = this._getSuggestions();
-                var foundSuggestion = null;
+            _findFirstSuggestion: function (query) { //Find first suggestion that matches query by name - returns suggestion element
+                var suggestions = this._getSuggestions(), suggestionObj = { element: null, data: null };
                 utils.each(suggestions, function (i, suggestion) {
                     var data = extractSuggestion($(suggestion));
-                    if (data && query.toLowerCase() === data.name.substring(0,query.length).toLowerCase()) {
-                        foundSuggestion = data;
-                        return false;
+                    if (data && query.toLowerCase() === data.name.substring(0, query.length).toLowerCase()) {
+                        suggestionObj.element = $(suggestion);
+                        suggestionObj.data = data;
+                        return false; //break
                     }
                 });
-                return foundSuggestion;
+                return suggestionObj;
             },
             highlightSuggestion: function ($suggestion) {
+                this._getSuggestions().removeClass("tt-is-under-cursor");
                 if ($suggestion) {
-                    this._getSuggestions().removeClass("tt-is-under-cursor");
                     $suggestion.addClass("tt-is-under-cursor");
                 }
+            },
+            highlightDatum: function ($suggestion) { //Higlight selected datum with own css
+                this._getSuggestions().removeClass("tt-is-current");
+                if ($suggestion) {
+                    $suggestion.addClass("tt-is-current");
+                }
             }
-            
         });
         return DropdownView;
         function extractSuggestion($el) {
@@ -1162,7 +1167,8 @@
                 tracer: this.tracer
                 //Little cleanup of all the event handlers here
                 //I do not see any need for handling whitespace key at all !
-            }).on("focused", this._handleFocused).on("enterKeyed tabKeyed", this._handleSelection)//.on("queryChanged", this._clearHint).on("queryChanged", this._clearSuggestions).on("queryChanged", this._queryForSuggestions)
+            }).on("focused", this._handleFocused)
+                //.on("queryChanged", this._clearHint).on("queryChanged", this._clearSuggestions).on("queryChanged", this._queryForSuggestions)
                 //.on("whitespaceChanged", this._updateHint)
                 //.on("queryChanged whitespaceChanged", this._queryForSuggestions)
                 //.on("queryChanged whitespaceChanged", this._setLanguageDirection) //include in queryForSuggestions
@@ -1171,8 +1177,9 @@
                 .on("tabKeyed upKeyed downKeyed", this._managePreventDefault)
                 .on("upKeyed downKeyed", this._moveDropdownCursor)
                 .on("upKeyed downKeyed", this._openDropdown)
+                .on("enterKeyed tabKeyed", this._handleSelection)
                 .on("tabKeyed leftKeyed rightKeyed", this._autocomplete)
-                .on("blured", this._handleBlured); 
+                .on("blured", this._handleBlured);
         }
         utils.mixin(TypeaheadView.prototype, EventTarget, {
             _managePreventDefault: function (e) {
@@ -1227,18 +1234,15 @@
                 }
             },
             _updateHint: function () {
-                var suggestion = null;
+                var suggestionObj = { element: null, data: null }, $suggestion = null;
                 if (this.selectedDatum) { //Find by key and highlight
                     var key = this.dsIdx[this.selectedDatumDsName].valueKey;
-                    var $suggestion = this.dropdownView._findSuggestion(this.selectedDatum[key]);
-                    this.dropdownView.highlightSuggestion($suggestion);
-                    suggestion = $suggestion ? $suggestion.data("suggestion") : null;
+                    $suggestion = this.dropdownView._findSuggestion(this.selectedDatum[key]);
                 }
-                else {
-                    //suggestion = this.dropdownView.getFirstSuggestion();
-                    suggestion = this.dropdownView._findFirstSuggestion(this.inputView.getInputValue());
-                }
-                var hint = suggestion ? suggestion.name : null, dropdownIsVisible = this.dropdownView.isVisible(), inputHasOverflow = this.inputView.isOverflow(), inputValue, query, escapedQuery, beginsWithQuery, match;
+                this.dropdownView.highlightDatum($suggestion);
+                suggestionObj = this.dropdownView._findFirstSuggestion(this.inputView.getInputValue()); //The hint suggestion (not element)
+                this.dropdownView.highlightSuggestion(suggestionObj.element); //Show the suggestion being hinted
+                var hint = suggestionObj.data ? suggestionObj.data.name : null, dropdownIsVisible = this.dropdownView.isVisible(), inputHasOverflow = this.inputView.isOverflow(), inputValue, query, escapedQuery, beginsWithQuery, match;
                 if (hint && dropdownIsVisible && !inputHasOverflow) {
                     inputValue = this.inputView.getInputValue();
                     query = inputValue.replace(/\s{2,}/g, " ").replace(/^\s+/g, "");
@@ -1283,12 +1287,13 @@
                 //In any case now the getSuggestion under control works fine
                 //suggestion = this.dropdownView.getSuggestionUnderCursor();
                 //Change this to accept the suggestion if we get it by event but as a failback look for it in the dropdownview
+                var suggestion = null;
                 if (e.data && e.data.hasOwnProperty('datum'))
                     suggestion = e.data;
                 else
                     suggestion = this.dropdownView.getSuggestionUnderCursor();
                 if (suggestion) {
-                    //this.tracer.push('Suggestion foud: ' + suggestion.name);
+                    //this.tracer.push('Typeaheadview handleselection: ' + suggestion.name);
                     this.inputView.setQuery(suggestion.name);
                     this.inputView.setInputValue(suggestion.name, true);
                     this.selectedDatumDsName = suggestion.dsname;
@@ -1314,14 +1319,14 @@
             _handleBusy: function (isBusy, isLoading) {
                 var busyNow = this.isBusy === true || this.isLoading === true;
                 if (!busyNow && (isBusy === true || isLoading === true))
-                    this.eventBus.trigger("busyUpdate",true);
+                    this.eventBus.trigger("busyUpdate", true);
                 else if (busyNow && (isBusy === false || isLoading === false)) {
                     var okNow = true;
                     if (this.isBusy === true && isBusy !== false)
                         okNow = false;
                     if (this.isLoading === true && isLoading !== false)
                         okNow = false;
-                    okNow && this.eventBus.trigger("busyUpdate",false);
+                    okNow && this.eventBus.trigger("busyUpdate", false);
                 }
                 if (isBusy !== null)
                     this.isBusy = isBusy;
@@ -1329,11 +1334,11 @@
                     this.isLoading = isLoading;
             },
             _handleFocused: function () {
-                this.inputView.isFocused = true; 
+                this.inputView.isFocused = true;
                 this._queryForSuggestions();
             },
             _handleBlured: function (e) {
-                this.inputView.isFocused = false; //Debug
+                this.inputView.isFocused = false; 
                 this._closeDropdown(e);
                 this._setInputValueToQuery();
                 this._manageLeaving(e);
@@ -1355,7 +1360,7 @@
                             //NOW OPEN THE DROPDOWN - but only if this is the focused input control
                             if (that.inputView.hasFocus()) {
                                 that._setLanguageDirection;
-                                that.dropdownView.open(); 
+                                that.dropdownView.open();
                                 that.dropdownView.renderSuggestions(dataset, suggestions);
                             }
                         }
@@ -1366,7 +1371,7 @@
                 }
             },
             _autocomplete: function (e) {
-                var isCursorAtEnd, ignoreEvent, query, hint, suggestion;
+                var isCursorAtEnd, ignoreEvent, query, hint, suggestionObj;
                 if (e.type === "rightKeyed" || e.type === "leftKeyed") {
                     isCursorAtEnd = this.inputView.isCursorAtEnd();
                     ignoreEvent = this.inputView.getLanguageDirection() === "ltr" ? e.type === "leftKeyed" : e.type === "rightKeyed";
@@ -1378,12 +1383,11 @@
                 hint = this.inputView.getHintValue();
                 if (hint !== "" && query !== hint) {
                     //suggestion = this.dropdownView.getFirstSuggestion();
-                    suggestion = this.dropdownView._findFirstSuggestion(query);
-                    //this.tracer.push('autocomplete: ' + suggestion.name);
-                    this.selectedDatum = suggestion.datum;
-                    this.selectedDatumDsName = suggestion.dsname;
-                    this.inputView.setInputValue(suggestion.name);
-                    this.eventBus.trigger("autocompleted", suggestion.datum, suggestion.dsname);
+                    suggestionObj = this.dropdownView._findFirstSuggestion(query);
+                    this.selectedDatum = suggestionObj.data.datum;
+                    this.selectedDatumDsName = suggestionObj.data.dsname;
+                    this.inputView.setInputValue(suggestionObj.data.name);
+                    this.eventBus.trigger("autocompleted", suggestionObj.data.datum, suggestionObj.data.dsname);
                 }
                 //this.tracer.push('Typeaheadview autocomplete: ' + query);
             },
@@ -1403,7 +1407,7 @@
                 this._clearSuggestions();
                 //this._getSuggestions();  
                 if (this.inputView.hasFocus())
-                   this._queryForSuggestions();  //only do this if control is already focused
+                    this._queryForSuggestions();  //only do this if control is already focused
             },
             setDatum: function (datum, dsname) {
                 //Since we are using namekeys and valuekeys we can not assume how to pickup datum values unless we have the name and value keys
@@ -1511,7 +1515,7 @@
                 }
             },
             reload: function () {
-                var $input = $(this), deferreds, view = $input.data(viewKey) ;
+                var $input = $(this), deferreds, view = $input.data(viewKey);
                 return this.each(reload);
                 function reload() {
                     var datasets = view && view.datasets ? view.datasets : null;
