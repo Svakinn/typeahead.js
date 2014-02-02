@@ -137,6 +137,7 @@ ko.bindingHandlers.typeahead = {
             var beforeSend = ko.unwrap(value.beforeSend);
             var handler = ko.unwrap(value.handler);
             var prefetchHandler = ko.unwrap(value.prefetchHandler);
+            var autoselect = ko.unwrap(value.autoselect);
             selectedDatum = value.selectedDatum;
             isBusy = value.isBusy;
             onAutoCompleted = ko.unwrap(value.onAutoCompleted);
@@ -146,57 +147,40 @@ ko.bindingHandlers.typeahead = {
             onInitialized = ko.unwrap(value.onInitialized);
             onNoSelect = ko.unwrap(value.onNoSelect);
             var options = {};
-            if (name)
-                options.name = name;
-            if (valueKey)
-                options.valueKey = valueKey;
-            if (!valueKey)
-                $.error("The 'valueKey' opton is requied by this binding handler!");
-            if (nameKey)
-                options.nameKey = nameKey;
-            if (restrictInputToDatum)
-                options.restrictInputToDatum = restrictInputToDatum;
-            if (cacheKey)
-                options.cacheKey = cacheKey;
-            if (limit)
-                options.limit = limit;
-            if (minLength || minLength === 0)
-                options.minLength = minLength;
-
-            if (templateElement)
-                options.template = $(templateElement).html();
-            else if (template)
-                options.template = template;
-            if (engine)
-                options.engine = engine;
-            if (header)
-                options.header = header;
-            if (footer)
-                options.footer = footer;
-            if (local)
-                options.local = ko.typeaheadPreFilter(local, tokenFields, valueFields, valueKey, nameKey, filter);
-            if (matcher)
-                options.matcher = matcher;
+            if (name) options.name = name;
+            if (valueKey) options.valueKey = valueKey;
+            if (!valueKey) $.error("The 'valueKey' opton is requied by this binding handler!");
+            if (nameKey) options.nameKey = nameKey;
+            if (restrictInputToDatum) options.restrictInputToDatum = restrictInputToDatum;
+            if (cacheKey) options.cacheKey = cacheKey;
+            if (limit) options.limit = limit;
+            if (minLength || minLength === 0) options.minLength = minLength;
+            if (templateElement) options.template = $(templateElement).html();
+            else if (template) options.template = template;
+            if (engine) options.engine = engine;
+            if (header) options.header = header;
+            if (footer) options.footer = footer;
+            if (local) options.local = ko.typeaheadPreFilter(local, tokenFields, valueFields, valueKey, nameKey, filter);
+            if (matcher) options.matcher = matcher;
+            if (autoselect || autoselect === false) options.autoselect = autoselect;
+            var lfilter = null;
+            var lurl = null;
+            var lhandler = null;
             if (prefetch || prefetchHandler) {
-                var lfilter = null;
                 var prefOptions = {};
-
                 //Function executed by typeahead (as the typeahead prefetch filter function) to convert base dataset to typeahead detum
                 //Will also execute the original filter function if included (lfilter)
                 function preFilter(data) {
                     return ko.typeaheadPreFilter(data, tokenFields, valueFields, valueKey, nameKey, lfilter);
                 }
 
-                if (prefetchHandler)
-                    prefOptions.prefetchHandler = prefetchHandler;
-                else if (typeof prefetch == 'function')
-                    prefOptions.prefetchHandler = prefetch;
-                else if (typeof prefetch == "string" || (typeof prefetch == "object" && prefetch.constructor === String))
-                    prefOptions.url = prefetch;
+                if (prefetchHandler) prefOptions.prefetchHandler = prefetchHandler;
+                else if (typeof prefetch == 'function') prefOptions.prefetchHandler = prefetch;
+                else if (typeof prefetch == "string" || (typeof prefetch == "object" && prefetch.constructor === String)) prefOptions.url = prefetch;
                 else if (typeof prefetch == 'object') {
-                    var lurl = ko.unwrap(prefetch.url);
+                    lurl = ko.unwrap(prefetch.url);
+                    lhandler = ko.unwrap(prefetch.prefetchHandler);
                     var lttl = ko.unwrap(prefetch.ttl);
-                    var lhandler = ko.unwrap(prefetch.prefetchHandler);
                     var lSkip = ko.unwrap(prefetch.skipCache);
                     lfilter = ko.unwrap(prefetch.filter);
                     if (lhandler)
@@ -209,34 +193,24 @@ ko.bindingHandlers.typeahead = {
                         prefOptions.skipCache = lSkip;
                 }
 
-                if (filter && !lfilter)
-                    lfilter = filter;
-                if (prefetchHandler && !prefOptions.prefetchHandler && !prefOptions.url)
-                    prefOptions.prefetchHandler = prefetchHandler;
-                if (url && !prefOptions.url)
-                    prefOptions.url = url;
-                if (ttl && !prefOptions.ttl)
-                    prefOptions.ttl = ttl;
-                if (skipCache && !(prefOptions.skipCache || prefOptions.skipCache === false))
-                    prefOptions.skipCache = skipCache;
+                if (filter && !lfilter) lfilter = filter;
+                if (prefetchHandler && !prefOptions.prefetchHandler && !prefOptions.url) prefOptions.prefetchHandler = prefetchHandler;
+                if (url && !prefOptions.url) prefOptions.url = url;
+                if (ttl && !prefOptions.ttl) prefOptions.ttl = ttl;
+                if (skipCache && !(prefOptions.skipCache || prefOptions.skipCache === false)) prefOptions.skipCache = skipCache;
                 prefOptions.filter = preFilter;
                 options.prefetch = prefOptions;
             }
             if (remote || handler) {
                 var remoteOptions = {};
-                var lfilter = null;
-                if (remote && typeof remote == 'function')
-                    remoteOptions.handler = remote;
-                else if (handler || typeof handler == 'function')
-                    remoteOptions.handler = handler;
-                else if (handler)
-                    remoteOptions.url = handler;
-                else if (typeof remote == 'string' || (typeof remote == 'object' && remote.constructor === String))
-                    remoteOptions.url = remote;
+                if (remote && typeof remote == 'function') remoteOptions.handler = remote;
+                else if (handler || typeof handler == 'function') remoteOptions.handler = handler;
+                else if (handler) remoteOptions.url = handler;
+                else if (typeof remote == 'string' || (typeof remote == 'object' && remote.constructor === String)) remoteOptions.url = remote;
                 else if (typeof remote == 'object') {
                     //Check for local options
-                    var lurl = ko.unwrap(remote.url);
-                    var lhandler = ko.unwrap(remote.handler);
+                    lurl = ko.unwrap(remote.url);
+                    lhandler = ko.unwrap(remote.handler);
                     var ldataType = ko.unwrap(remote.url);
                     var lcache = ko.unwrap(remote.cache);
                     var lcacheKey = ko.unwrap(remote.cacheKey);
@@ -249,32 +223,19 @@ ko.bindingHandlers.typeahead = {
                     var lmaxParallelRequests = ko.unwrap(remote.maxParallelRequests);
                     var lbeforeSend = ko.unwrap(remote.beforeSend);
                     lfilter = ko.unwrap(remote.filter);
-                    if (lurl)
-                        remoteOptions.url = lurl;
-                    if (ldataType)
-                        remoteOptions.dataType = ldataType;
-                    if (lcache)
-                        remoteOptions.cache = lcache;
-                    if (lcache)
-                        remoteOptions.cacheKey = lcacheKey;
-                    if (lskipCache || lskipCache === false)
-                        remoteOptions.skipCache = lskipCache;
-                    if (ltimeout)
-                        remoteOptions.timeout = ltimeout;
-                    if (lwildcard)
-                        remoteOptions.wildcard = lwildcard;
-                    if (lreplace)
-                        remoteOptions.replace = lreplace;
-                    if (lrateLimitFn)
-                        remoteOptions.rateLimitFn = lrateLimitFn;
-                    if (lrateLimitWait)
-                        remoteOptions.rateLimitWait = lrateLimitWait;
-                    if (lmaxParallelRequests)
-                        remoteOptions.maxParallelRequests = lmaxParallelRequests;
-                    if (lbeforeSend)
-                        remoteOptions.beforeSend = lbeforeSend;
-                    if (filter && !lfilter)
-                        lfilter = filter;
+                    if (lurl) remoteOptions.url = lurl;
+                    if (ldataType) remoteOptions.dataType = ldataType;
+                    if (lcache) remoteOptions.cache = lcache;
+                    if (lcache) remoteOptions.cacheKey = lcacheKey;
+                    if (lskipCache || lskipCache === false) remoteOptions.skipCache = lskipCache;
+                    if (ltimeout) remoteOptions.timeout = ltimeout;
+                    if (lwildcard) remoteOptions.wildcard = lwildcard;
+                    if (lreplace) remoteOptions.replace = lreplace;
+                    if (lrateLimitFn) remoteOptions.rateLimitFn = lrateLimitFn;
+                    if (lrateLimitWait) remoteOptions.rateLimitWait = lrateLimitWait;
+                    if (lmaxParallelRequests) remoteOptions.maxParallelRequests = lmaxParallelRequests;
+                    if (lbeforeSend) remoteOptions.beforeSend = lbeforeSend;
+                    if (filter && !lfilter) lfilter = filter;
                 }
 
                 //Function executed by typeahead (as the typeahead remote filter function) to convert base dataset to typeahead detum
@@ -283,41 +244,24 @@ ko.bindingHandlers.typeahead = {
                     return ko.typeaheadPreFilter(data, tokenFields, valueFields, valueKey, nameKey, lfilter);
                 }
 
-                if (url && !remoteOptions.url)
-                    remoteOptions.url = url;
-                if (handler && !remoteOptions.handler)
-                    remoteOptions.handler = handler;
-                if (dataType && !remoteOptions.url)
-                    remoteOptions.dataType = dataType;
-                if (cache && !remoteOptions.url)
-                    remoteOptions.cache = cache;
-                if (cacheKey && !remoteOptions.cacheKey)
-                    remoteOptions.cacheKey = cacheKey;
-                if ((skipCache || skipCache === false) && (!remoteOptions.skipCache && remoteOptions.skipCache !== false))
-                    remoteOptions.skipCache = skipCache;
-                if (timeout && !remoteOptions.timeout)
-                    remoteOptions.timeout = timeout;
-                if (wildcard && !remoteOptions.wildcard)
-                    remoteOptions.wildcard = wildcard;
-                if (replace && !remoteOptions.replace)
-                    remoteOptions.replace = replace;
-                if (rateLimitFn && !remoteOptions.rateLimitFn)
-                    remoteOptions.rateLimitFn = rateLimitFn;
-                if (rateLimitWait && !remoteOptions.rateLimitWait)
-                    remoteOptions.rateLimitWait = rateLimitWait;
-                if (maxParallelRequests && !remoteOptions.maxPerallelRequests)
-                    remoteOptions.maxParallelRequests = maxParallelRequests;
-                if (beforeSend && !remoteOptions.beforeSend)
-                    remoteOptions.beforeSend = beforeSend;
+                if (url && !remoteOptions.url) remoteOptions.url = url;
+                if (handler && !remoteOptions.handler) remoteOptions.handler = handler;
+                if (dataType && !remoteOptions.url) remoteOptions.dataType = dataType;
+                if (cache && !remoteOptions.url) remoteOptions.cache = cache;
+                if (cacheKey && !remoteOptions.cacheKey) remoteOptions.cacheKey = cacheKey;
+                if ((skipCache || skipCache === false) && (!remoteOptions.skipCache && remoteOptions.skipCache !== false)) remoteOptions.skipCache = skipCache;
+                if (timeout && !remoteOptions.timeout) remoteOptions.timeout = timeout;
+                if (wildcard && !remoteOptions.wildcard) remoteOptions.wildcard = wildcard;
+                if (replace && !remoteOptions.replace) remoteOptions.replace = replace;
+                if (rateLimitFn && !remoteOptions.rateLimitFn) remoteOptions.rateLimitFn = rateLimitFn;
+                if (rateLimitWait && !remoteOptions.rateLimitWait) remoteOptions.rateLimitWait = rateLimitWait;
+                if (maxParallelRequests && !remoteOptions.maxPerallelRequests) remoteOptions.maxParallelRequests = maxParallelRequests;
+                if (beforeSend && !remoteOptions.beforeSend) remoteOptions.beforeSend = beforeSend;
                 remoteOptions.filter = remFilter;
                 options.remote = remoteOptions;
             }
-
-            if (!name)
-                options.name = element.id;
-
-            if (options.template && !options.engine && Hogan)
-                options.engine = Hogan;
+            if (!name) options.name = element.id;
+            if (options.template && !options.engine && Hogan) options.engine = Hogan;
             options.tracer = [];
             opts.push(options);
         }
@@ -357,3 +301,4 @@ ko.bindingHandlers.typeahead = {
         }
     }
 };
+

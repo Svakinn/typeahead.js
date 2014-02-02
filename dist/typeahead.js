@@ -21,30 +21,30 @@
 (function ($) {
     var VERSION = "0.9.4";
     var utils = {
-        isMsie: function() {
+        isMsie: function () {
             //Improved IE11 detection (borrowed from the bowser Github project: https://github.com/ded/bowser)
             return /(msie|trident)/i.test(navigator.userAgent) ? navigator.userAgent.match(/(msie |rv:)(\d+(.\d+)?)/i)[2] : false;
         },
-        isBlankString: function(str) {
+        isBlankString: function (str) {
             return !str || /^\s*$/.test(str);
         },
-        escapeRegExChars: function(str) {
+        escapeRegExChars: function (str) {
             return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
         },
-        isString: function(obj) {
+        isString: function (obj) {
             return typeof obj === "string";
         },
-        isNumber: function(obj) {
+        isNumber: function (obj) {
             return typeof obj === "number";
         },
         isArray: $.isArray,
         isFunction: $.isFunction,
         isObject: $.isPlainObject,
-        isUndefined: function(obj) {
+        isUndefined: function (obj) {
             return typeof obj === "undefined";
         },
-        isEmpty: function(str) {
-            if (typeof str === "undefined" || str === null || str === '');
+        isEmpty: function (str) {
+            return (typeof str === "undefined" || str === null || str === '');
         },
         bind: $.proxy,
         bindAll: function (obj) {
@@ -149,7 +149,20 @@
         getProtocol: function () {
             return location.protocol;
         },
-        noop: function () { }
+        noop: function () { },
+        moveToNextField: function (element) {
+            var fields = $($('body')
+                    .find('a[href], button, input, select, textarea')
+                    .filter(':visible').filter(':enabled')
+                    .toArray()
+                    .sort(function (a, b) {
+                        return ((a.tabIndex > 0) ? a.tabIndex : 1000) - ((b.tabIndex > 0) ? b.tabIndex : 1000);
+                    }));
+            var idx = fields.index(element) + 1;
+            if (idx >= fields.length)
+                idx = 0;
+            fields.eq(idx).focus();
+        }
     };
     var EventTarget = function () {
         var eventSplitter = /\s+/;
@@ -325,6 +338,7 @@
             this.filter = o.filter;
             this.replace = o.replace;
             this.name = o.name;
+            this.limit = o.limit;
             this.cacheKey = o.cacheKey;
             this.skipCache = o.skipCache;
             if (this.url) {
@@ -365,9 +379,9 @@
                     incrementPendingRequests();
                     if (this.handler)
                         if (Q)
-                            jqXhr = Q.when(this.handler(url, data)).then(function () { always(); return Q.resolve(true); });
+                            jqXhr = Q.when(this.handler(url, data, that.limit)).then(function () { always(); return Q.resolve(true); });
                         else
-                            jqXhr = $.when(this.handler(url, data)).then(function () { always(); return $.Deferred().resolve(); });
+                            jqXhr = $.when(this.handler(url, data, that.limit)).then(function () { always(); return $.Deferred().resolve(); });
                     else
                         jqXhr = pendingRequests[url] = $.ajax(url, this.ajaxSettings).always(always);
                 }
@@ -456,6 +470,7 @@
             this.adjacencyList = {};
             this.nameAdjacencyList = {};
             this.storage = this.cacheKey ? new PersistentStorage(this.cacheKey) : null;
+            this.autoselect = o.autoselect === true ? true : false; //False by default
         }
         utils.mixin(Dataset.prototype, {
             _processLocalData: function (data) {
@@ -646,6 +661,7 @@
                 if (this.remote && typeof this.remote == 'function') this.remote = { handler: this.remote }; //Allow for remote to be handler function
                 if (this.prefetch && typeof this.prefetch == 'function') this.prefetch = { prefetchHandler: this.prefetch }; //Allow for prefetch to be handler function
                 if (this.remote && !this.remote.url && !this.remote.cacheKey && !this.remote.name) this.remote.cacheKey = this.cacheKey || this.remote.name || this.name; //Fallback for caching name for handler if cacheKey is not specified in the remote section, another approach would be to raise error if missing
+                if (this.remote) this.remote.limit = this.limit; //transfer th items max limit to remote for use in the transport module
                 this.transport = this.remote ? new Transport(this.remote) : null;
                 this.isRemote = this.remote ? true : false;
                 deferred = this.prefetch ? this._loadPrefetchData(this.prefetch) : $.Deferred().resolve();
@@ -1133,6 +1149,7 @@
             this.tracer = null; //Debug tool for logs since console.log is unusable in IE since it receives focus
             this.dsIdx = []; //NameIndex on datasets
             this.minMinLength = null; //The least minLength of the datasets - to check if any of them allow for empty query (get all)
+            this.autoselect = false;
             //Pickup required options from the datasets
             //Note: we are assuming that each dataset has the same name and valueKeys, restrictInputToDatum is picked up from any of those
             //Perhaps a better way would be to have some global settings seporate from the datasets
@@ -1151,6 +1168,7 @@
                         this.tracer = this.datasets[i]['tracer'];
                     if (this.minMinLength === null || this.minMinLength > this.datasets[i].minLength)
                         this.minMinLength = this.datasets[i].minLength;
+                    if (this.datasets[i].autoselect === true) this.autoselect = true;
                 }
             }
             if (!this.tracer) this.tracer = [];
@@ -1177,8 +1195,8 @@
                 .on("tabKeyed upKeyed downKeyed", this._managePreventDefault)
                 .on("upKeyed downKeyed", this._moveDropdownCursor)
                 .on("upKeyed downKeyed", this._openDropdown)
-                .on("enterKeyed tabKeyed", this._handleSelection)
                 .on("tabKeyed leftKeyed rightKeyed", this._autocomplete)
+                .on("enterKeyed tabKeyed", this._handleSelection)
                 .on("blured", this._handleBlured);
         }
         utils.mixin(TypeaheadView.prototype, EventTarget, {
@@ -1188,7 +1206,7 @@
                     case "tabKeyed":  //Stop user from leaving input on tab-key if auto-completion is still to be done by tab key
                         hint = this.inputView.getHintValue();
                         inputValue = this.inputView.getInputValue();
-                        preventDefault = hint && hint !== inputValue;
+                        preventDefault = hint && hint !== inputValue && !this.autoselect;
                         break;
 
                     case "upKeyed":
@@ -1250,6 +1268,7 @@
                     beginsWithQuery = new RegExp("^(?:" + escapedQuery + ")(.*$)", "i");
                     match = beginsWithQuery.exec(hint);
                     this.inputView.setHintValue(inputValue + (match ? match[1] : ""));
+                    //this.tracer.push('updateHint: ' + inputValue + (match ? match[1] : ""));
                 }
             },
             _clearHint: function () {
@@ -1309,6 +1328,10 @@
                     this._handleBusy(false, null);
                     this.dropdownView.close();
                     this.eventBus.trigger("selected", suggestion.datum, suggestion.dsname);
+                    //If autoselect then move to the next field
+                    if (this.autoselect && e.type != 'tabKeyed') {
+                        utils.moveToNextField(this.inputView.$input[0]);
+                    }
                 };
                 //else
                 //    this.tracer.push('Typeaheadview handleselection found no suggestion');
@@ -1338,7 +1361,7 @@
                 this._queryForSuggestions();
             },
             _handleBlured: function (e) {
-                this.inputView.isFocused = false; 
+                this.inputView.isFocused = false;
                 this._closeDropdown(e);
                 this._setInputValueToQuery();
                 this._manageLeaving(e);
@@ -1384,12 +1407,17 @@
                 if (hint !== "" && query !== hint) {
                     //suggestion = this.dropdownView.getFirstSuggestion();
                     suggestionObj = this.dropdownView._findFirstSuggestion(query);
-                    this.selectedDatum = suggestionObj.data.datum;
-                    this.selectedDatumDsName = suggestionObj.data.dsname;
-                    this.inputView.setInputValue(suggestionObj.data.name);
-                    this.eventBus.trigger("autocompleted", suggestionObj.data.datum, suggestionObj.data.dsname);
+                    if (suggestionObj && suggestionObj.data) {
+                        this.selectedDatum = suggestionObj.data.datum;
+                        this.selectedDatumDsName = suggestionObj.data.dsname;
+                        this.inputView.setInputValue(suggestionObj.data.name);
+                        this.eventBus.trigger("autocompleted", suggestionObj.data.datum, suggestionObj.data.dsname);
+                        //if autoselection and thab then prevent default since the selection wil move to next
+                        //if (this.autoselect && e.type == 'tabKeyed')
+                        //    e.preventDefault();
+                        //this.tracer.push('Typeaheadview autocompleteOK: ' + query);
+                    }
                 }
-                //this.tracer.push('Typeaheadview autocomplete: ' + query);
             },
             _propagateEvent: function (e) {
                 this.eventBus.trigger(e.type);

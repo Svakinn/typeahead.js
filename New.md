@@ -19,7 +19,8 @@ Hopefully the maintainers of the typeahead control will take some if not all of 
 **11)** **New feature** Selected datum is highlighted in the suggestion list.  
 **12)** **New feature** Hint is found even if the first suggestion does not start with same characters as the input box.
 **13)** **New feature** Hinted value is highligted in the suggestion list. 
-**14)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
+**14)** **New feature** Autoselect option available
+**15)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
 
 The changes in more detail
 ====
@@ -66,7 +67,9 @@ The selected datum is now highlighted in the suggestion list.  This is the behav
 The current functionality of typeahead is to calculate hint if the first suggestion in suggestion list starts with same characters as the typed query in the input box.  This means that input hint is not given if the first suggestion does not match.  This is not uncommon scenario, especially where tokens are used for search or remote option is used.  I changed this behavior to look for hint in all the suggestions, not just the first.
 #13) Hinted suggestion highlighted
 The hint now highlights the relevant line in the suggestion list.
-#14) Knockout Binding Handler
+#14) Autoselect option
+By setting the autoselect option to true, the behavior of the typeahead will change to move immediately to next field when tab or enter key is entered. In that case the hinted value will be selected in the typeahead.  Selecting dropdown by mouse click will also move the cursor to the next field in the page.
+#15) Knockout Binding Handler
 Knockout is very powerful tool for data-binding view models to html pages.  Me myself and many others use it in their SPA applications.  For SPA programmers it is a basic requirement for custom tools to have ready to use Knockout Binding Handler.  
 This one also has application beyond just options initialization and two-way data binding. It also handles the task of abstracting the datum object from the viewmodel.  For example the user can data bind the local option to any data that is a list of rows, `knockoutObservable` and `knockoutObservableArray`  included.  The only thing the user has to supply is a mapping info to the dataset columns using the `nameKey`, `valueKey`, `tokenFields` and `valueFields` options.  I think this mapping may be something that could even be implemented within the typeahead control (some day maybe).  
 

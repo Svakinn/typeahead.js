@@ -171,6 +171,8 @@ When defining a dataset, the following options are available:
 * `minLength` – The minimum number characters entered in the input box before the typeahead fires up. Defaults to `1`.  
 **>>New<<**: Setting this value to 0 fires up typeahead on empty input box with all suggestions up to the `limit` value.
 
+* `autoselect` **>>New<<** – (true/false) Changes the behavior of the typeahead to move to next field when tab or enter key is pressed, selecting the hinted value. Clicks on dropdown will also move the cursor to the next field.  Default value is false.  
+
 * `template` – The template used to render suggestions. Can be a string or a precompiled template. If not provided, suggestions will render as their value contained in a `<p>` element (i.e. `<p>value</p>`).
 
 * `engine` – The template engine used to compile/render `template` if it is a string. Any engine can use used as long as it adheres to the [expected API][template-engine-compatibility].  
@@ -250,7 +252,8 @@ When configuring `remote`, the following options are available:
 
 * `url` – A URL to make requests to when  the data provided by `local` and `prefetch` is insufficient.  **`url` or `handler` options are required for remote lookups.**
 
-* `handler` **>>New<<** - Custom function with the signature `function(query, data)` to take control of the typeahead data retrieval.  This can be both used to handle local synchronous data or to fetch asynchronous data from remote source using the **promise pattern**.    
+* `handler` **>>New<<** - Custom function with the signature `function(query, data, maxRows)` to take control of the typeahead data retrieval. `query` is the entered text in the input control, `data` the results as array of items, `maxRows` (optional) the value from the dataset's `limit` value.  
+This can be both used to handle local synchronous data or to fetch asynchronous data from remote source using the **promise pattern**.    
 In case this function is used for asynchronous data fetch it must return `promise`, but it should return `true` for synchronous operations.  Both [JQuery promises](http://api.jquery.com/promise/ "JQuery promises") and [Q promises](http://documentup.com/kriskowal/q/#introduction) are supported.  
 When `handler` option is used for data retrieval the options `beforeSend`, `replace`, `wildcard`, `dataType` and  `cache` do not apply.  However the throttling options are used and the cache control is also in play.
 See [this page](New.md) for details on the handler usage.
