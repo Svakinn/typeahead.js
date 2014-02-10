@@ -1,26 +1,28 @@
 About this fork
 ====
-The fork is intended to solve critical bugs and supply basic functionality sorely missing in current version of typeahead.js.  
+This fork is intended to solve critical bugs and supply basic functionality sorely missing in the **0.9.3** version of typeahead.js.  
 Main reason of course being able to use this control in my application.  
 As the list of necessary changes grew larger the need for documentation and sharing with the community grew larger. I have a sneaky suspicion that there are many others in similar problems with this control as I am and many of the features and bugs have been solved or semi-solved many times over by individuals like myself.  
-Hopefully the maintainers of the typeahead control will take some if not all of the features into this or next version of the control.
+Hopefully the maintainers of the typeahead control will take some if not all of the features into this or next version of the control.   
+**Update: New version of typeahead 0.10.0 is now available and 0.10.1 just about ready.  However not all the features presented here are supported in those versions.**
 
 #The quick overview of changes
 **1)** **Critical bugfix** - IE11 problems caused by failed browser detection.  
 **2)** **Bugfix** - Mouse-click on dropdown selection caused focus and blur events to occur on the input control.  
 **3)** **Critical Bugfix** - Local data suggestion search broke on suggestions that had space in the display name.  
 **4)** **New urgent feature** - Allowing for custom, on-demand data retrieval without direct Ajax call.  
-**5)** **New urgent feature** - Not to require display names to be unique  
-**6)** **New urgent feature** - Getting control over the internal cache for remote data  
+**5)** **New urgent feature** - Not to require display names to be unique.  
+**6)** **New urgent feature** - Getting control over the internal cache for remote data.  
 **7)** **Much requested basic feature** - Get some handle on when customer exits input box without picking name from the suggestion list.  
 **8)** **Requested basic feature** Get suggestions before typing starts.  
-**9)** **New feature** Simplified initialization - suggestion search triggering (on demand)   
+**9)** **New feature** Simplified initialization - suggestion search triggering (on demand).   
 **10)** **New feature** Busy indication    
 **11)** **New feature** Selected datum is highlighted in the suggestion list.  
-**12)** **New feature** Hint is found even if the first suggestion does not start with same characters as the input box.
-**13)** **New feature** Hinted value is highligted in the suggestion list. 
-**14)** **New feature** Autoselect option available
-**15)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
+**12)** **New feature** Hint is found even if the first suggestion does not start with same characters as the input box.  
+**13)** **New feature** Hinted value is highlighted in the suggestion list.   
+**14)** **New feature** Autoselect option available.  
+**15)** **New feature** Auto-positioning of the dropdown.  
+**16)**  **A must for myself..** - Nicely working Knockout Binding Handler, simplifying the set-up of the control and data-binding to the typed text, the selected datum and the suggestion data.
 
 The changes in more detail
 ====
@@ -30,7 +32,7 @@ This bug was identified and reported by @nathankoop (#557).  Modification of the
 When user uses mouse click to select suggestion in the dropdown list, the dropdown list receives the focus and thus blurs the input box.  In the current version (0.9.3), a hack was made to try to minimize the effect of this, but still this causes blur/focus flickering on the input box.  The solution was simply to stop the `mouseDown` event on the dropdown to bubble and then remove the 'hack' in the `_handleSelection` handler.
 #3) Bugfix: Local data search
 The local data suggestion search does not handle suggestions that include space.  Also it has been criticized for being resource expensive and over complicated.  
-I rewrote the search to behave on spaced suggestions.  It now takes the original query unchanged for the search.  It priorities the search on the suggestion display value first, before looking at other tokens.  The implementation should also be a bit faster in most situations.  Of course this search could be made even faster by some optimization and search mechanics like bubble sort.  However there is always the tradeoff between spending CPU on preparing the data for search and the actual search itself.   I also included an option (`matcher` ) for users to do their own implementation of local search.
+I rewrote the search to behave on spaced suggestions.  It now takes the original query unchanged for the search.  It priorities the search on the suggestion display value first, before looking at other tokens.  The implementation should also be a bit faster in most situations.  Of course this search could be made even faster by some optimization and search mechanics like bubble sort.  However there is always the trade-off between spending CPU on preparing the data for search and the actual search itself.   I also included an option (`matcher` ) for users to do their own implementation of local search.
 You could also argue that instead of using large amount of data locally would better be resolved by using the remote option.
 #4) Custom data retrieval
 The ability to control the data-retrieval better than just controlling Ajax lookup is vital for many applications (like my own).  For example users using view models and own implementations of data-lookups require this sourly.  This regards both the issue of reusing internal functions and controlling the display while the data retrieval takes place, i.e. managing progress indicators and other custom stuff. 
@@ -53,7 +55,7 @@ Many users require validation on if the typeahead control produced valid option/
 #8) Get suggestions before typing starts
 The typeahead control could be useful for displaying options before user starts to type in.  Of course only if you have a small set of options.  This could also be used with the `restrictInputToDatum` option.  The implementation of this was quite simple: allow the `minLength` to be 0 and allow the `_getSuggestions` to run with this value.
 #9) Simplified initialization
-One of the most annoying thing with current typeahead is the fact that the programmer has to handle initialization of data in the control by using the method `setQuery` and.. in case of prefetched data, this has to be one after the control is initialized.   
+One of the most annoying thing with current typeahead is the fact that the programmer has to handle initialization of data in the control by using the method `setQuery` and.. In case of prefetched data, this has to be one after the control is initialized.   
 Another thing related to this is that when remote data has been selected, it will trigger extra remote lookup for the newly selected text.  
 All these problems are solved by changing when the internal suggestion search of the control is triggered.  Now it is triggered when the control receives focus as well as when the user types in text.  Suggestion search is also triggered when prefetched data has initialized, if the control is focused, so programmers no longer have to implement capture of the `typeahead:initialized` event.  
 Another benefit of this change is that data initialization will not trigger remote searches firing of on page load.   
@@ -62,14 +64,19 @@ Let’s say you have 10 typeahead controls hooked up with remote data on your pa
 New event `busyUpdate` has been implemented.  It will fire of when the busy state of the control is changed.  This includes both initialization of local/prefetched data and when suggestion search is running.  This enables programmers to easily hook up loaders or busy-indicators to the control.  The knockout binding handler (see below) also supports this by allowing data binding to the `isBusy` option.  
 Plunker demo of this option is available [here](http://plnkr.co/edit/56nDoL?p=preview).
 #11) Identify the selected datum
-The selected datum is now highlighted in the suggestion list.  This is the behavior user would expect, i.e. in standard dropdownbox.  New class is allocated for the selected element: **tt-is-current**
+The selected datum is now highlighted in the suggestion list.  This is the behaviour user would expect, i.e. in standard dropdownbox.  New class is allocated for the selected element: **tt-is-current**
 #12) Suggestion hint change
-The current functionality of typeahead is to calculate hint if the first suggestion in suggestion list starts with same characters as the typed query in the input box.  This means that input hint is not given if the first suggestion does not match.  This is not uncommon scenario, especially where tokens are used for search or remote option is used.  I changed this behavior to look for hint in all the suggestions, not just the first.
+The current functionality of typeahead is to calculate hint if the first suggestion in suggestion list starts with same characters as the typed query in the input box.  This means that input hint is not given if the first suggestion does not match.  This is not uncommon scenario, especially where tokens are used for search or remote option is used.  I changed this behaviour to look for hint in all the suggestions, not just the first.
 #13) Hinted suggestion highlighted
 The hint now highlights the relevant line in the suggestion list.
 #14) Autoselect option
-By setting the autoselect option to true, the behavior of the typeahead will change to move immediately to next field when tab or enter key is entered. In that case the hinted value will be selected in the typeahead.  Selecting dropdown by mouse click will also move the cursor to the next field in the page.
-#15) Knockout Binding Handler
+By setting the autoselect option to true, the behaviour of the typeahead will change to move immediately to next field when tab or enter key is entered. In that case the hinted value will be selected in the typeahead.  Selecting dropdown by mouse click will also move the cursor to the next field in the page.
+#15) Auto-positioning of the dropdown
+By default the dropdown including the suggestions gets positioned below the input box.  However there are two scenarios where you would like to allow the input box position to be calculated on each suggestion update:  
+**1.** If your input box is at the bottom of the page or at the bottom of visible area of the browser.  
+**2.** When you are dynamically moving the input box around the screen.
+To turn on this ability the option `floatDropdown: true`  is used.
+#16) Knockout Binding Handler
 Knockout is very powerful tool for data-binding view models to html pages.  Me myself and many others use it in their SPA applications.  For SPA programmers it is a basic requirement for custom tools to have ready to use Knockout Binding Handler.  
 This one also has application beyond just options initialization and two-way data binding. It also handles the task of abstracting the datum object from the viewmodel.  For example the user can data bind the local option to any data that is a list of rows, `knockoutObservable` and `knockoutObservableArray`  included.  The only thing the user has to supply is a mapping info to the dataset columns using the `nameKey`, `valueKey`, `tokenFields` and `valueFields` options.  I think this mapping may be something that could even be implemented within the typeahead control (some day maybe).  
 

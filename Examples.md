@@ -162,8 +162,9 @@ If we are handling synchronous fetch, (do not have to wait for remote response) 
 ## 2) Asynchronous prefetch example
 The next typeahead control demonstrates asynchronous prefetch.
 
-	{minLength: 0,  prefetch: handlerAssSync, valueKey: 'code', nameKey: 'name', template: templ}"
-Note that this one is configured to show all available options when focused `minLength: 0`.
+	{minLength: 0,  prefetch: handlerAssSync, valueKey: 'code', nameKey: 'name', template: templ, autoSelect: true, floatDropdown: true}"
+Note that this one is configured to show all available options when focused `minLength: 0`.  
+This example also demonstrates the use of the `autoSelect` and `floatDropdown` options.  
 We will be using the prefetch function handlerAssync that will delay execution and return promise.  
 How to set-up busy indicator to the control is also demonstrated here, using the new `typeahead:busyUpdate` event.  
 The assync handler function looks like this: 

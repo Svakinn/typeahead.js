@@ -1,11 +1,12 @@
 [![build status](https://secure.travis-ci.org/twitter/typeahead.js.png?branch=master)](http://travis-ci.org/twitter/typeahead.js)
 
-[typeahead.js][gh-page] (Fork: Svakinn)
+[typeahead.js][gh-page] (Fork: Svakinn for 0.9.3)
 =======================
 
 Inspired by [twitter.com][twitter]'s autocomplete search functionality, typeahead.js is a fast and [fully-featured][features] autocomplete library.      
-This fork is from [Twitter/typeahead.js](). The aim is to provide bug fixes and necessary missing features in that version.  
-Hopefully the next version of typeahead.js will render this fork obsolete.   
+This fork is from [Twitter/typeahead.js](). The aim is to provide bug fixes and necessary missing features in the **0.9.3** version.  
+**UPDATE: Twitter/typeahead version 0.10.0 is just out and has some but not all of the issues resolved by this fork resolved.  However note the config for 0.10 is not backward compatible with the 0.9.3 version.
+Hopefully the next versions of typeahead.js (0.10.1-0.10.3) will finally render this fork obsolete.**   
 Knockout binding handler is also included here.  
 New features are marked in this document as **>>New<<**.
 
@@ -117,7 +118,7 @@ Returns the current input control value.
 **Example:** 
     
     var myText = $('#MyInputBoxId').typeahead('getQuery');
-    Still the same value can be acceived via:
+    Still the same value can be achieved via:
     var myText = $('#MyInputBoxId').val();
     
 #### jQuery#typeahead('clearCache') **>>New<<**
@@ -134,7 +135,7 @@ The cache cleared is both the remote and the prefetched cache.
 
 Reloads all suggestion data in the control.  This includes `local`, `prefetch` and `remote` data.  This function is mostly handy when the html page containing the control is reused, for example when used in SPA applications.  In that case the Initialize method is not executed automatically but we may still require refresh on the control.   
 When `cacheKey` is used as function or local data is data bound using data binding library (such as `Knockout`) we may want to update the suggestion data manually when underlying data (i.e. `local`) is changed.
-The refresh method returnes JQuery deferred object that resolves when all data is reloaded.  New event is also raised: `typeahead:refreshed`
+The refresh method returns JQuery deferred object that resolves when all data is reloaded.  New event is also raised: `typeahead:refreshed`
  
 **Example:** 
     
@@ -171,7 +172,10 @@ When defining a dataset, the following options are available:
 * `minLength` – The minimum number characters entered in the input box before the typeahead fires up. Defaults to `1`.  
 **>>New<<**: Setting this value to 0 fires up typeahead on empty input box with all suggestions up to the `limit` value.
 
-* `autoselect` **>>New<<** – (true/false) Changes the behavior of the typeahead to move to next field when tab or enter key is pressed, selecting the hinted value. Clicks on dropdown will also move the cursor to the next field.  Default value is false.  
+* `autoSelect` **>>New<<** – (true/false) Changes the behavior of the typeahead to move to next field when tab or enter key is pressed, selecting the hinted value. Clicks on dropdown will also move the cursor to the next field.  Default value is false.  
+
+* `floatDropdown` **>>New<<** – (true/false) Changes the behavior of the suggestion dropdown to recalculate its position on each suggestion render.  
+When there is not enough room in the visible space in the browser below the input control to contain the entire dropdown, it will be positioned above the input control instead (if there is enough space there).  Default value is false.
 
 * `template` – The template used to render suggestions. Can be a string or a precompiled template. If not provided, suggestions will render as their value contained in a `<p>` element (i.e. `<p>value</p>`).
 
@@ -233,13 +237,13 @@ When configuring `prefetch`, the following options are available:
 * `url` – A URL to a JSON file containing an array of datums. **url or handler Required.**
 
 * `prefetcHandler` **>>New<<** - Custom function with the signature `function()`, returning array of datums, to take control of the prefetched data retrieval.  This can be both used to handle local synchronous data or to fetch asynchronous data from remote source using the **promise pattern**.    
-In case this function is used for asynchronous data fetch it must return  the data array wraped in`promise` (i.e. `return $.Deferred().resolve(data);`), but it should return the data arrey  for synchronous operations.  Both [JQuery promises](http://api.jquery.com/promise/ "JQuery promises") and [Q promises](http://documentup.com/kriskowal/q/#introduction) are supported.
+In case this function is used for asynchronous data fetch it must return  the data array wrapped in`promise` (i.e. `return $.Deferred().resolve(data);`), but it should return the data array  for synchronous operations.  Both [JQuery promises](http://api.jquery.com/promise/ "JQuery promises") and [Q promises](http://documentup.com/kriskowal/q/#introduction) are supported.
 
 * `ttl` – The time (in milliseconds) the prefetched data should be cached in local storage. Defaults to `86400000` (1 day).  Setting this value to 0 will prevent caching.
 
 * `filter` – A function with the signature `filter(parsedResponse)` that transforms the response body into an array of datums. Expected to return an array of datums.
 
-* `cacheKey` **>>New<<** – String or function returning string, to control the name used for caching of the prefetched values.  Using function for cachekey can be useful when using the typeahead reload method.
+* `cacheKey` **>>New<<** – String or function returning string, to control the name used for caching of the prefetched values.  Using function for cacheKey can be useful when using the typeahead reload method.
 
 * `skipCache` **>>New<<** – If set to true, stops typeahead from caching prefetched values in browsers local store. Setting `ttl` to 0 has the same effect.
 
@@ -306,7 +310,7 @@ typeahead.js triggers the following custom events:
 
 * `typeahead:reloaded` **>>New<<** – Triggered when dataset has been reloaded using the typeahead method `reload`.  
 
-* `typeahead:busyUpdate` **>>New<<** – Triggered when the typeahead starts or stops lookup work -> is busy processing or looking up data.  This applies also to `prefetch` data.  This event can be used to manage loaders or busy indicators for the control. Your worker functon should have the following signature:  `function myFunction(element,isBusy)`  where isBusy is the boolean busy indication value.
+* `typeahead:busyUpdate` **>>New<<** – Triggered when the typeahead starts or stops lookup work -> is busy processing or looking up data.  This applies also to `prefetch` data.  This event can be used to manage loaders or busy indicators for the control. Your worker function should have the following signature:  `function myFunction(element,isBusy)`  where isBusy is the boolean busy indication value.
 
 All custom events are triggered on the element initialized as a typeahead.
 
@@ -319,7 +323,7 @@ You can use JQuery to hook the custom events to your handling functions.
 where the handler function has this format:
     
     function yourSelectedEventHanlerFunction(element,datum) { 
-		//your implementation here
+        //your implementation here
     }
   
 Above the **datum** parameter contains the data for the suggestion you selected.   

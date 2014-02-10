@@ -470,7 +470,8 @@
             this.adjacencyList = {};
             this.nameAdjacencyList = {};
             this.storage = this.cacheKey ? new PersistentStorage(this.cacheKey) : null;
-            this.autoselect = o.autoselect === true ? true : false; //False by default
+            this.autoSelect = o.autoSelect === true; //False by default
+            this.floatDropdown = o.floatDropdown === true;
         }
         utils.mixin(Dataset.prototype, {
             _processLocalData: function (data) {
@@ -780,6 +781,10 @@
             _handleSpecialKeyEvent: function ($e) {
                 var keyName = this.specialKeyCodeMap[$e.which || $e.keyCode];
                 keyName && this.trigger(keyName + "Keyed", $e);
+                if (keyName == 'enter') {
+                    $e.preventDefault(); //Stop event if/when moved to next field (i.e. from submitint or entering link)
+                }
+
             },
             _compareQueryToInputValue: function () {
                 var inputValue = this.getInputValue(), isSameQuery = compareQueries(this.query, inputValue);
@@ -896,6 +901,8 @@
             this.isEmpty = true;
             this.isMouseOverDropdown = false;
             this.$menu = $(o.menu).on("mousedown.tt", this._handleMouseDown).on("mouseenter.tt", this._handleMouseenter).on("mouseleave.tt", this._handleMouseleave).on("click.tt", ".tt-suggestion", this._handleSelection).on("mouseover.tt", ".tt-suggestion", this._handleMouseover);
+            this.$input = o.input;
+            this.$hint = o.hint;
         }
         utils.mixin(DropdownView.prototype, EventTarget, {
             _handleMouseenter: function () {
@@ -921,6 +928,19 @@
             },
             _show: function () {
                 this.$menu.css("display", "block");
+            },
+            setPos: function () {
+                var winH = $(window).height(), menuH = $(this.$menu[0]).outerHeight(true), inpPos = $(this.$input[0]).offset();
+                var y, inpH = $(this.$input[0]).outerHeight(true), scrollTop = $(window).scrollTop();
+                //Move dropdown above input if not enaugh room below and there is visible room enaugh above
+                if ((inpPos.top + inpH + menuH > winH + scrollTop) && (menuH < (inpPos.top - scrollTop))) {
+                    y = inpPos.top - menuH; // + scrollTop;
+                    //this.tracer.push('MenuUp: '+y);
+                } else {
+                    y = inpPos.top + inpH;
+                    //this.tracer.push('Menu: ' + y);
+                }
+                $(this.$menu[0]).offset({ top: y, left: inpPos.left });
             },
             _hide: function () {
                 this.$menu.hide();
@@ -993,7 +1013,14 @@
                     left: "auto",
                     right: " 0"
                 };
-                dir === "ltr" ? this.$menu.css(ltrCss) : this.$menu.css(rtlCss);
+                //dir === "ltr" ? this.$menu.css(ltrCss) : this.$menu.css(rtlCss); Suggested by @nawar:
+                if (dir === "ltr") {
+                    this.$menu.css(ltrCss);
+                    this.$hint.css(ltrCss);
+                } else {
+                    this.$menu.css(rtlCss);
+                    this.$hint.css(rtlCss);
+                }
             },
             moveCursorUp: function () {
                 this._moveCursor(-1);
@@ -1114,7 +1141,7 @@
                 position: "absolute",
                 top: "100%",
                 left: "0",
-                zIndex: "100",
+                zIndex: "1070", //to overlay at least bootstrap navbar-fixed-top (1030)
                 display: "none"
             }
         };
@@ -1149,7 +1176,8 @@
             this.tracer = null; //Debug tool for logs since console.log is unusable in IE since it receives focus
             this.dsIdx = []; //NameIndex on datasets
             this.minMinLength = null; //The least minLength of the datasets - to check if any of them allow for empty query (get all)
-            this.autoselect = false;
+            this.autoSelect = false;
+            this.floatDropdown = false;
             //Pickup required options from the datasets
             //Note: we are assuming that each dataset has the same name and valueKeys, restrictInputToDatum is picked up from any of those
             //Perhaps a better way would be to have some global settings seporate from the datasets
@@ -1168,7 +1196,8 @@
                         this.tracer = this.datasets[i]['tracer'];
                     if (this.minMinLength === null || this.minMinLength > this.datasets[i].minLength)
                         this.minMinLength = this.datasets[i].minLength;
-                    if (this.datasets[i].autoselect === true) this.autoselect = true;
+                    if (this.datasets[i].autoSelect === true) this.autoSelect = true;
+                    if (this.datasets[i].floatDropdown === true) this.floatDropdown = true;
                 }
             }
             if (!this.tracer) this.tracer = [];
@@ -1177,6 +1206,8 @@
             $hint = this.$node.find(".tt-hint");
             this.dropdownView = new DropdownView({
                 menu: $menu,
+                input: $input, //Needed to calculate dropdown position
+                hint: $hint, //Needed to control alignment
                 tracer: this.tracer
             }).on("suggestionSelected", this._handleSelection).on("cursorMoved", this._clearHint).on("cursorMoved", this._setInputValueToSuggestionUnderCursor).on("cursorRemoved", this._setInputValueToQuery).on("cursorRemoved", this._updateHint).on("suggestionsRendered", this._updateHint).on("opened", this._updateHint).on("closed", this._clearHint).on("opened closed", this._propagateEvent);
             this.inputView = new InputView({
@@ -1206,7 +1237,7 @@
                     case "tabKeyed":  //Stop user from leaving input on tab-key if auto-completion is still to be done by tab key
                         hint = this.inputView.getHintValue();
                         inputValue = this.inputView.getInputValue();
-                        preventDefault = hint && hint !== inputValue && !this.autoselect;
+                        preventDefault = hint && hint !== inputValue && !this.autoSelect;
                         break;
 
                     case "upKeyed":
@@ -1328,8 +1359,8 @@
                     this._handleBusy(false, null);
                     this.dropdownView.close();
                     this.eventBus.trigger("selected", suggestion.datum, suggestion.dsname);
-                    //If autoselect then move to the next field
-                    if (this.autoselect && e.type != 'tabKeyed') {
+                    //If autoSelect then move to the next field
+                    if (this.autoSelect && e.type != 'tabKeyed') {
                         utils.moveToNextField(this.inputView.$input[0]);
                     }
                 };
@@ -1382,9 +1413,11 @@
                         if (query === that.inputView.getQuery()) { //This is still the active query
                             //NOW OPEN THE DROPDOWN - but only if this is the focused input control
                             if (that.inputView.hasFocus()) {
-                                that._setLanguageDirection;
+                                that._setLanguageDirection();
                                 that.dropdownView.open();
                                 that.dropdownView.renderSuggestions(dataset, suggestions);
+                                if (that.floatDropdown)
+                                    that.dropdownView.setPos(); //move up if not enaugh room below the input
                             }
                         }
                     });
@@ -1412,9 +1445,6 @@
                         this.selectedDatumDsName = suggestionObj.data.dsname;
                         this.inputView.setInputValue(suggestionObj.data.name);
                         this.eventBus.trigger("autocompleted", suggestionObj.data.datum, suggestionObj.data.dsname);
-                        //if autoselection and thab then prevent default since the selection wil move to next
-                        //if (this.autoselect && e.type == 'tabKeyed')
-                        //    e.preventDefault();
                         //this.tracer.push('Typeaheadview autocompleteOK: ' + query);
                     }
                 }
@@ -1496,7 +1526,7 @@
         }
     }();
     (function () {
-        var cache = {}, viewKey = "ttView", methods, eventbus;
+        var cache = {}, viewKey = "ttView", methods, eventBus;
         methods = {
             initialize: function (datasetDefs) {
                 var datasets, view;

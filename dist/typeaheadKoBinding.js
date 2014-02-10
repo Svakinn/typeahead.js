@@ -137,7 +137,8 @@ ko.bindingHandlers.typeahead = {
             var beforeSend = ko.unwrap(value.beforeSend);
             var handler = ko.unwrap(value.handler);
             var prefetchHandler = ko.unwrap(value.prefetchHandler);
-            var autoselect = ko.unwrap(value.autoselect);
+            var autoSelect = ko.unwrap(value.autoSelect);
+            var floatDropdown = ko.unwrap(value.floatDropdown);
             selectedDatum = value.selectedDatum;
             isBusy = value.isBusy;
             onAutoCompleted = ko.unwrap(value.onAutoCompleted);
@@ -162,7 +163,8 @@ ko.bindingHandlers.typeahead = {
             if (footer) options.footer = footer;
             if (local) options.local = ko.typeaheadPreFilter(local, tokenFields, valueFields, valueKey, nameKey, filter);
             if (matcher) options.matcher = matcher;
-            if (autoselect || autoselect === false) options.autoselect = autoselect;
+            if (autoSelect || autoSelect === false) options.autoSelect = autoSelect;
+            if (floatDropdown || floatDropdown === false) options.floatDropdown = floatDropdown;
             var lfilter = null;
             var lurl = null;
             var lhandler = null;
@@ -301,4 +303,3 @@ ko.bindingHandlers.typeahead = {
         }
     }
 };
-
